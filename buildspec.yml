@@ -7,36 +7,26 @@ phases:
     commands:
       - echo Installing source dependencies...
       - npm install
+
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 985539800682.dkr.ecr.us-east-1.amazonaws.com
       - REPOSITORY_URI=985539800682.dkr.ecr.us-east-1.amazonaws.com/simple-node-app
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - echo Using image tag: $IMAGE_TAG
+
   build:
     commands:
       - echo Building Docker image...
       - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+
   post_build:
     commands:
       - echo Pushing Docker image to ECR...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-
-      - echo Registering new ECS task definition revision...
-
-      - aws ecs describe-task-definition --task-definition simple-node-app > task-def.json
-
-      - |
-        jq 'del(.taskDefinition.status, .taskDefinition.revision, .taskDefinition.taskDefinitionArn, .taskDefinition.requiresAttributes, .taskDefinition.compatibilities, .taskDefinition.registeredAt, .taskDefinition.registeredBy)' task-def.json > clean-task-def.json
-
-      - |
-        jq --arg IMAGE "$REPOSITORY_URI:$IMAGE_TAG" '.taskDefinition.containerDefinitions[0].image = $IMAGE' clean-task-def.json > new-task-def.json
-
-      - NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
-      - echo "New task definition ARN: $NEW_TASK_DEF_ARN"
-
+      - echo Writing image definitions file for ECS...
       - printf '[{"name":"node-app","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
-  files: imagedefinitions.json
+  files:
+    - imagedefinitions.json
