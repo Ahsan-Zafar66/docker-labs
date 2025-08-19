@@ -4,7 +4,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-    res.send('Hello from Node.js App deployed via CodeBuild & ECS!. Now I am modifying my code');
+    res.send('Hello from Node.js App deployed via CodeBuild & ECS!. Now I am modifying my code. Congratulations on building the Pipeline you really rock!');
 });
 
 app.listen(PORT, () => {
